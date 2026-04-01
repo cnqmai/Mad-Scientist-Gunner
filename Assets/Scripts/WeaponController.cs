@@ -9,6 +9,7 @@ public class WeaponController : MonoBehaviour
     {
         public string weaponName;
         public Sprite weaponIcon;       // Hình ảnh của cẩu súng để hiển thị lên UI
+        public RuntimeAnimatorController weaponAnimator; // Animator (hình dạng Player) ứng với súng này
         public GameObject bulletPrefab; // Prefab viên đạn của vũ khí này
         public float fireRate = 0.5f;   // Tốc độ bắn (giây)
         public GameObject muzzleFlashPrefab; // Prefab hiệu ứng lửa đầu nòng
@@ -23,10 +24,17 @@ public class WeaponController : MonoBehaviour
     {
         animator = GetComponent<Animator>(); // Tìm Animator của Player
         
-        // Cập nhật UI vũ khí đầu tiên ngay khi vào game
-        if (weapons.Length > 0 && UIManager.instance != null)
+        // Cập nhật UI và hình dáng Player cầm súng đầu tiên ngay khi vào game
+        if (weapons.Length > 0)
         {
-            UIManager.instance.UpdateWeaponIcon(weapons[0].weaponIcon);
+            if (UIManager.instance != null)
+            {
+                UIManager.instance.UpdateWeaponIcon(weapons[0].weaponIcon);
+            }
+            if (animator != null && weapons[0].weaponAnimator != null)
+            {
+                animator.runtimeAnimatorController = weapons[0].weaponAnimator;
+            }
         }
     }
 
@@ -57,6 +65,12 @@ public class WeaponController : MonoBehaviour
         if (UIManager.instance != null && weapons[currentWeaponIndex].weaponIcon != null)
         {
             UIManager.instance.UpdateWeaponIcon(weapons[currentWeaponIndex].weaponIcon);
+        }
+
+        // Thay đổi toàn bộ bộ Animation của Player (để cầm súng tương ứng)
+        if (animator != null && weapons[currentWeaponIndex].weaponAnimator != null)
+        {
+            animator.runtimeAnimatorController = weapons[currentWeaponIndex].weaponAnimator;
         }
     }
 

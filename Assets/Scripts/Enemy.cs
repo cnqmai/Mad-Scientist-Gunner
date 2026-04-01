@@ -14,6 +14,11 @@ public class Enemy : MonoBehaviour
     public float attackCooldown = 1f; // Chờ 1 giây mới được chém tiếp (chống bug spam)
     public float moveSpeed = 1.25f;     // Tốc độ đi bộ đuổi theo Player
     
+    [Header("Bắn đạn (Chỉ bật cho Quái đánh xa)")]
+    public bool isRanged = false;      // Có phải quái bắn xa không?
+    public GameObject bulletPrefab;    // Prefab viên đạn quái
+    public Transform firePoint;        // Vị trí nòng súng của quái
+    
     private Transform player; // Để ghi nhớ vị trí người chơi
     private float nextAttackTime = 0f;
     private bool facingRight = false; // Phụ thuộc vào ảnh gốc con quái của bạn quay hướng nào (ví dụ mặc định quay mỏ sang trái thì là false)
@@ -81,22 +86,42 @@ public class Enemy : MonoBehaviour
         // Reset thời gian chờ chiêu
         nextAttackTime = Time.time + attackCooldown;
 
-        // Kích hoạt animation chém (Hit)
+        // Kích hoạt animation chém (Hit) hoặc bắn
         if (animator != null)
         {
             animator.SetTrigger("Hit"); 
         }
 
-        // Tạo một vòng tròn ảo tại vị trí quái vật để quẹt trúng Player
-        // Bạn có thể tạo thêm một obj "AttackPoint" nếu muốn chính xác hơn
-        Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(transform.position, attackRange);
+        if (isRanged && bulletPrefab != null && firePoint != null)
+        {
+            // Trì hoãn việc bắn đạn 0.3 giây để khớp với động tác vung súng
+            Invoke("ShootBullet", 0.3f);
+        }
+        else if (!isRanged)
+        {
+            // Đánh cận chiến bằng vòng tròn ảo (cũng trì hoãn 0.3s cho chân thực)
+            Invoke("MeleeDamage", 0.3f);
+        }
+    }
 
+    void ShootBullet()
+    {
+        if (currentHealth <= 0) return; // Nếu chết trước khi kịp bắn thì hủy
+
+        // Bắn đạn: Nếu đang quay phải (facingRight) thì đạn bay phải (0 độ), ngược lại bay trái (180 độ)
+        Vector3 spawnRotation = facingRight ? Vector3.zero : new Vector3(0, 180, 0);
+        Instantiate(bulletPrefab, firePoint.position, Quaternion.Euler(spawnRotation));
+    }
+
+    void MeleeDamage()
+    {
+        if (currentHealth <= 0) return; // Nếu chết trước khi kịp chém thì hủy
+
+        Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(transform.position, attackRange);
         foreach (Collider2D hit in hitEnemies)
         {
-            // Nếu cái thứ quẹt trúng có Tag là Player
             if (hit.CompareTag("Player"))
             {
-                // Trừ máu Player
                 PlayerController playerScript = hit.GetComponent<PlayerController>();
                 if (playerScript != null)
                 {
