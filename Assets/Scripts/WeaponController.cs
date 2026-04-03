@@ -13,12 +13,19 @@ public class WeaponController : MonoBehaviour
         public GameObject bulletPrefab; // Prefab viên đạn của vũ khí này
         public float fireRate = 0.5f;   // Tốc độ bắn (giây)
         public GameObject muzzleFlashPrefab; // Prefab hiệu ứng lửa đầu nòng
+        public bool isAutomatic = true; // Bật để cho phép giữ phím bắn liên tục (như súng tiểu liên)
+        
+        [Header("Laser Setup")]
+        public bool isContinuousLaser = false; // Bật nếu vũ khí này là Laser đứng yên
+        public Vector3 firePointOffset; // Chỉnh lệch nòng súng (VD: trục X nhích 0.5, Y nhích 0.1)
     }
 
     public Weapon[] weapons;
     private int currentWeaponIndex = 0;
     private float nextFireTime = 0f;
+    private float shootBlockTimer = 0f; // Bộ đếm thời gian khóa di chuyển khi bắn
     private Animator animator;
+    private GameObject activeContinuousLaser; // Lưu trữ tia laser đang xuất hiện
 
     void Start()
     {
@@ -46,11 +53,56 @@ public class WeaponController : MonoBehaviour
             SwitchWeapon();
         }
 
-        // Bắn súng bằng phím K (cho phép giữ phím nếu muốn, dùng GetKey thay vì GetKeyDown)
-        // Yêu cầu của bạn là ấn phím K để bắn:
-        if (Input.GetKeyDown(KeyCode.K))
+        if (weapons.Length > 0)
         {
-            Shoot();
+            Weapon currentWeapon = weapons[currentWeaponIndex];
+
+            // Nếu là siêu vũ khí Laser bắn ra 1 tia đứng yên dài liên tục
+            if (currentWeapon.isContinuousLaser)
+            {
+                if (Input.GetKeyDown(KeyCode.K))
+                {
+                    // QUAN TRỌNG: Kích hoạt Trigger Shoot cho Laser để nó chuyển sang trạng thái Player_Shoot
+                    if (animator != null)
+                    {
+                        animator.SetTrigger("Shoot");
+                    }
+
+                    // Vừa bấm tạo ra tia laser và gắn vào dưới FirePoint
+                    if (activeContinuousLaser == null && currentWeapon.bulletPrefab != null)
+                    {
+                        // TransformPoint sẽ tự động bao gồm cả tỷ lệ co giãn lật mặt (Scale.x = -1) nên tọa độ Offset sẽ chuẩn mốc
+                        Vector3 actualFirePoint = firePoint.TransformPoint(currentWeapon.firePointOffset);
+
+                        // Vì tia Laser là CON (Child) của nòng súng, nó tự động thừa kế lật mặt Scale.
+                        // Do đó, KHÔNG tự quay nó 180 độ nữa nếu không nó sẽ bị lật ngược 2 lần.
+                        activeContinuousLaser = Instantiate(currentWeapon.bulletPrefab, actualFirePoint, firePoint.rotation, firePoint);
+                    }
+                }
+                else if (Input.GetKeyUp(KeyCode.K))
+                {
+                    // Thả phím ra thì xóa tia laser
+                    if (activeContinuousLaser != null) Destroy(activeContinuousLaser);
+                }
+            }
+            else
+            {
+                // Súng bình thường (cho giữ phím hoặc bấm 1 phát)
+                bool tryToShoot = currentWeapon.isAutomatic ? Input.GetKey(KeyCode.K) : Input.GetKeyDown(KeyCode.K);
+
+                if (tryToShoot)
+                {
+                    Shoot();
+                }
+            }
+
+            // Truyền trạng thái giữ phím vào Animator (Dùng boolean IsShooting cho súng laser cần tiếp tục animation khi giữ)
+            if (animator != null)
+            {
+                // Bật cờ "IsShooting" trong Animator khi người chơi đang giữ nút K (Laser auto lặp animation)
+                bool isHoldingFire = (currentWeapon.isAutomatic || currentWeapon.isContinuousLaser) && Input.GetKey(KeyCode.K);
+                animator.SetBool("IsShooting", isHoldingFire);
+            }
         }
     }
 
@@ -58,6 +110,9 @@ public class WeaponController : MonoBehaviour
     {
         if (weapons.Length == 0) return;
         
+        // Nếu đang bắn tia laser mà lỡ đổi súng thì xóa tia laser kia đi
+        if (activeContinuousLaser != null) Destroy(activeContinuousLaser);
+
         currentWeaponIndex = (currentWeaponIndex + 1) % weapons.Length;
         Debug.Log("Đã chuyển sang vũ khí: " + weapons[currentWeaponIndex].weaponName);
         
@@ -90,18 +145,42 @@ public class WeaponController : MonoBehaviour
 
             if (currentWeapon.bulletPrefab != null && firePoint != null)
             {
-                // Chú ý: Đạn bắn ra sẽ quay mặt theo hướng của Player (thông qua firePoint.rotation)
+                // Chú ý: Đạn bay ra ngoài không trung (không làm con của Player) nên phải quay mặt thủ công 180 độ.
                 Vector3 spawnRotation = transform.localScale.x > 0 ? Vector3.zero : new Vector3(0, 180, 0);
-                Instantiate(currentWeapon.bulletPrefab, firePoint.position, Quaternion.Euler(spawnRotation));
+                
+                // Cập nhật vị trí bù trừ (Offset) cho từng loại súng (TransformPoint hỗ trợ lật Offset khi Scale đảo)
+                Vector3 actualFirePoint = firePoint.TransformPoint(currentWeapon.firePointOffset);
+
+                // Instatiate đạn thường tại tọa độ lệch và KHÔNG GẮN VÀO PLAYER
+                Instantiate(currentWeapon.bulletPrefab, actualFirePoint, Quaternion.Euler(spawnRotation));
 
                 // Sinh ra hiệu ứng tia lửa nòng súng nếu có
                 if (currentWeapon.muzzleFlashPrefab != null)
                 {
-                    Instantiate(currentWeapon.muzzleFlashPrefab, firePoint.position, Quaternion.Euler(spawnRotation), firePoint);
+                    Instantiate(currentWeapon.muzzleFlashPrefab, actualFirePoint, Quaternion.Euler(spawnRotation), firePoint);
                 }
             }
             
             nextFireTime = Time.time + currentWeapon.fireRate;
+            shootBlockTimer = Time.time + currentWeapon.fireRate; // Khóa di chuyển theo thời gian FireRate
+        }
+    }
+
+    // Hàm gọi từ bên ngoài để kiểm tra xem Player có đang trong tư thế bắn hay không
+    public bool IsCurrentlyShooting()
+    {
+        if (weapons.Length == 0) return false;
+        Weapon currentWeapon = weapons[currentWeaponIndex];
+
+        // Nếu là súng Laser đứng yên, Player bị khóa di chuyển miễn là còn giữ nút K
+        if (currentWeapon.isContinuousLaser)
+        {
+            return Input.GetKey(KeyCode.K);
+        }
+        else
+        {
+            // Các súng khác: Khóa di chuyển theo ngưỡng thời gian xả đạn (fireRate)
+            return Time.time < shootBlockTimer;
         }
     }
 }

@@ -7,6 +7,8 @@ public class PlayerController : MonoBehaviour
     public int maxHealth = 100; // Khai báo máu tối đa
     
     [Header("Giới hạn di chuyển")]
+    public float maxX = 47.4f;  // Vị trí xa nhất bên phải màn hình
+    public float minX = -47.4f; // Vị trí xa nhất bên trái màn hình
     public float maxY = -0.5f; // Vị trí cao nhất Player có thể đi lên (có thể chỉnh trong Inspector)
     public float minY = -2.8f; // Vị trí thấp nhất Player có thể đi xuống
 
@@ -35,9 +37,25 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        // Lấy thông tin bàn phím (W, A, S, D)
-        movement.x = Input.GetAxisRaw("Horizontal"); // A, D
-        movement.y = Input.GetAxisRaw("Vertical");   // W, S
+        // Nhận diện phím bấm thô trước khi xử lý
+        float hInput = Input.GetAxisRaw("Horizontal");
+        float vInput = Input.GetAxisRaw("Vertical");
+
+        // Khóa di chuyển nếu Player đang trong thời gian bắn
+        WeaponController weaponController = GetComponent<WeaponController>();
+        bool isShooting = weaponController != null && weaponController.IsCurrentlyShooting();
+
+        if (isShooting)
+        {
+            // Bị đứng im khi bắn
+            movement = Vector2.zero;
+        }
+        else
+        {
+            // Lấy thông tin bàn phím (W, A, S, D) khi không bắn
+            movement.x = hInput;
+            movement.y = vInput;
+        }
 
         // Cập nhật trạng thái chạy cho Animator
         isRunning = movement.magnitude > 0;
@@ -46,12 +64,15 @@ public class PlayerController : MonoBehaviour
             animator.SetBool("IsRunning", isRunning);
         }
 
+        // Lấy hướng từ input thực tế (hInput) để xoay mặt, cho phép xoay cả khi đang đứng bắn
+        float flipDirection = isShooting ? hInput : movement.x;
+
         // Xoay mặt nhân vật sang trái/phải
-        if (movement.x > 0 && !facingRight)
+        if (flipDirection > 0 && !facingRight)
         {
             Flip();
         }
-        else if (movement.x < 0 && facingRight)
+        else if (flipDirection < 0 && facingRight)
         {
             Flip();
         }
@@ -67,6 +88,9 @@ public class PlayerController : MonoBehaviour
 
         // Giới hạn trục Y không cho vượt quá maxY và không thấp hơn minY
         newPosition.y = Mathf.Clamp(newPosition.y, minY, maxY);
+        
+        // Giới hạn trục X không cho vượt quá hai rìa màn hình
+        newPosition.x = Mathf.Clamp(newPosition.x, minX, maxX);
 
         // Di chuyển bằng Rigidbody2D để đảm bảo vật lý chính xác
         rb.MovePosition(newPosition);
@@ -103,6 +127,21 @@ public class PlayerController : MonoBehaviour
         if (currentHealth <= 0)
         {
             Die();
+        }
+    }
+
+    // Hàm hồi máu cho Player (gọi từ HealthPickup)
+    public void Heal(int amount)
+    {
+        if (currentHealth <= 0) return; // Đã chết thì không thể hồi
+
+        currentHealth = Mathf.Min(currentHealth + amount, maxHealth); // Không vượt quá máu tối đa
+        Debug.Log("Player được hồi " + amount + " máu! Máu hiện tại: " + currentHealth);
+
+        // Cập nhật UI thanh máu
+        if (UIManager.instance != null)
+        {
+            UIManager.instance.UpdateHealth(currentHealth, maxHealth);
         }
     }
 

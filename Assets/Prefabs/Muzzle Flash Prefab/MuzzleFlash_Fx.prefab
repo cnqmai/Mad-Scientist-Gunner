@@ -101,10 +101,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   flashSprites:
-  - {fileID: -6314112325621443026, guid: 4d48bf3d4fc85dd4a8505331a1c7d854, type: 3}
-  - {fileID: 9116027845839244485, guid: b906c0d03c96a894b91b3b67e5d62f12, type: 3}
-  - {fileID: -703724193335300884, guid: 922861727a565a74686f5c9ffa20fd5b, type: 3}
-  - {fileID: -3123426174011370217, guid: d1696f57573282744b5a7f9547eb59cc, type: 3}
   - {fileID: 6103748778672874133, guid: 2cedd86baae2cac45b0fd7a41a76a6f0, type: 3}
   - {fileID: 8980193989422010402, guid: 8c98ee9cb5d39434fa81a0b297e01584, type: 3}
   - {fileID: -7903798677641043761, guid: 262b6e3ad32abd54f802ab5bd906b674, type: 3}
@@ -112,11 +108,5 @@ MonoBehaviour:
   - {fileID: 8578003861932682334, guid: 20d8f2249db867a44905f283f4e8cf25, type: 3}
   - {fileID: 2859031901334513851, guid: 9a0d0230251d12241a2c65c995fe5bd4, type: 3}
   - {fileID: -5744186834122679491, guid: 4a5a2071fad528547a752bbeb2cc4c2b, type: 3}
-  - {fileID: -2398996036367384741, guid: c2972714ffa19e948b6ab3c51f874e9a, type: 3}
-  - {fileID: 5683181355157313026, guid: b452efe989c01d84581957d3a8dd64b1, type: 3}
-  - {fileID: -1238541382985000323, guid: df3894e5cade1b345bf480e54bbd11a6, type: 3}
-  - {fileID: 8910783842207814461, guid: babdf003bfe7bb346847adf7c3e8de61, type: 3}
-  - {fileID: 9021592848533965756, guid: bb686b06ee359fa4ea0bba4a69960536, type: 3}
-  - {fileID: 7165320195929013480, guid: 320b877bd1cfde0459adf2fd6dc64521, type: 3}
   - {fileID: 7878541825562238885, guid: e9efdab21491c2344bcda065a65d9258, type: 3}
   frameRate: 0.05

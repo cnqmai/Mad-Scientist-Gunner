@@ -18,6 +18,11 @@ public class Enemy : MonoBehaviour
     public bool isRanged = false;      // Có phải quái bắn xa không?
     public GameObject bulletPrefab;    // Prefab viên đạn quái
     public Transform firePoint;        // Vị trí nòng súng của quái
+
+    [Header("Rơi Potion hồi máu (Random)")]
+    public GameObject[] pickupPrefabs; // Kéo 3 Prefab potion vào đây (Xanh / Vàng / Đỏ)
+    [Range(0f, 1f)]
+    public float dropChance = 0.35f;   // Xác suất rơi potion (mặc định 35%)
     
     private Transform player; // Để ghi nhớ vị trí người chơi
     private float nextAttackTime = 0f;
@@ -145,6 +150,8 @@ public class Enemy : MonoBehaviour
     // Mặc định là Normal, nếu đạn điện gọi TakeDamage(damage, DamageType.Electric)
     public void TakeDamage(int damage, DamageType damageType = DamageType.Normal)
     {
+        if (currentHealth <= 0) return; // Nếu đã chết thì không tính thêm sát thương hay Kill lặp lại nữa
+
         currentHealth -= damage;
         Debug.Log(gameObject.name + " bị trúng đạn! Máu còn: " + currentHealth);
 
@@ -153,7 +160,7 @@ public class Enemy : MonoBehaviour
         {
             if (damageType == DamageType.Electric)
             {
-                animator.SetTrigger("Electric");
+                animator.SetTrigger("GetElectric");
             }
             else
             {
@@ -174,8 +181,23 @@ public class Enemy : MonoBehaviour
         // Cộng điểm và Kill
         if (UIManager.instance != null)
         {
-            UIManager.instance.AddScore(10); // Giết 1 quái được 10 điểm
-            UIManager.instance.AddKill();    // Tăng số mạng hạ gục lên 1
+            UIManager.instance.AddScore(1); // Giết 1 quái được 1 điểm (tương đương 1 mạng)
+            UIManager.instance.AddKill();   // Tăng số mạng hạ gục lên 1
+        }
+
+        // Random rơi potion hồi máu
+        if (pickupPrefabs != null && pickupPrefabs.Length > 0 && Random.value <= dropChance)
+        {
+            // Chọn ngẫu nhiên 1 trong 3 loại potion
+            int randomIndex = Random.Range(0, pickupPrefabs.Length);
+            GameObject chosenPotion = pickupPrefabs[randomIndex];
+
+            if (chosenPotion != null)
+            {
+                Vector3 dropPos = transform.position + new Vector3(0f, 0.3f, 0f);
+                Instantiate(chosenPotion, dropPos, Quaternion.identity);
+                Debug.Log(gameObject.name + " rơi ra potion loại " + randomIndex + "!");
+            }
         }
 
         if (animator != null)

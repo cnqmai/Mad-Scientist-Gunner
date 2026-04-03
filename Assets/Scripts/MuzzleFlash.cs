@@ -4,13 +4,13 @@ using UnityEngine;
 public class MuzzleFlash : MonoBehaviour
 {
     public Sprite[] flashSprites; // Kéo thả các hình ảnh tia lửa (skeleton-animation 0-5) vào đây
-    public float frameRate = 0.05f; // Tốc độ trễ giữa các khung hình (giây)
+    public float frameRate = 0.02f; // Tốc độ trễ giữa các khung hình (giây)
 
     private SpriteRenderer spriteRenderer;
     private int currentFrame = 0;
     private float timer = 0f;
 
-    void Start()
+    void Awake()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
         if (flashSprites.Length > 0)
