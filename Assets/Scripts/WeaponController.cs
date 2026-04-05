@@ -103,8 +103,8 @@ public class WeaponController : MonoBehaviour
             }
             else
             {
-                // Súng bình thường (cho giữ phím hoặc bấm 1 phát)
-                bool tryToShoot = currentWeapon.isAutomatic ? Input.GetKey(KeyCode.K) : Input.GetKeyDown(KeyCode.K);
+                // Súng bình thường: bắt buộc NHẤN 1 LẦN RA 1 VIÊN (Không cho giữ bấm liên tục)
+                bool tryToShoot = Input.GetKeyDown(KeyCode.K);
 
                 if (tryToShoot)
                 {
@@ -112,11 +112,10 @@ public class WeaponController : MonoBehaviour
                 }
             }
 
-            // Truyền trạng thái giữ phím vào Animator (Dùng boolean IsShooting cho súng laser cần tiếp tục animation khi giữ)
             if (animator != null)
             {
-                // Bật cờ "IsShooting" trong Animator khi người chơi đang giữ nút K (Laser auto lặp animation)
-                bool isHoldingFire = (currentWeapon.isAutomatic || currentWeapon.isContinuousLaser) && Input.GetKey(KeyCode.K);
+                // Chỉ bật cờ "IsShooting" nếu là súng Laser đang giữ phím
+                bool isHoldingFire = currentWeapon.isContinuousLaser && Input.GetKey(KeyCode.K);
                 animator.SetBool("IsShooting", isHoldingFire);
             }
         }

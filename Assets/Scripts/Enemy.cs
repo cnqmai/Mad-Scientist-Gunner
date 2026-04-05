@@ -31,25 +31,13 @@ public class Enemy : MonoBehaviour
     private int laserHitCount = 0; // Đếm số tia laser chạm trúng
 
     [Header("Cấu hình giật điện nhấp nháy")]
-    public string electricStateName = "Electric"; // Điền TÊN CỤC STATE GIẬT điện trong Animator vào đây
+    public string electricStateName = "Enemy_GetElectric"; // Điền TÊN CỤC STATE GIẬT điện trong Animator vào đây
     private float electricPulseTime = 0f; // Đồng hồ nhấp nháy
-    private int lockedStateHash; // Lưu mốc tư thế cũ
-    private float lockedNormalizedTime; // Lưu thời gian frame cũ
+    private bool lastPulseState = false; // Nhớ trạng thái chớp của frame trước
 
     // Bullet.cs sẽ gọi hàm này và bơm thêm thời gian stun khi laser chạm quái
     public void ApplyStun(float duration)
     {
-        // Nếu trước đó đang tỉnh táo mà bị bắn, LẬP TỨC CHỤP ẢNH LẠI tư thế hiện tại (để mồi cho chớp nháy)
-        if (stunTimer <= 0 && animator != null)
-        {
-            AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
-            if (!state.IsName(electricStateName))
-            {
-                lockedStateHash = state.shortNameHash;
-                lockedNormalizedTime = state.normalizedTime % 1f; // Chụp lại Frame đang đi bộ
-            }
-        }
-
         stunTimer = duration;
     }
 
@@ -102,14 +90,29 @@ public class Enemy : MonoBehaviour
             {
                 animator.speed = 0f; // ĐÓNG BĂNG TUYỆT ĐỐI thời gian Animator, bắt kẹt ở Frame lúc vừa trúng đạn
 
-                // Bật tắt liên tục mỗi 0.1s bằng cách nhảy qua lại giữa 2 State (vẫn đóng băng cùng 1 Frame)
-                if (electricPulseTime % 0.2f < 0.1f)
+                // Tính toán xem nhịp này LÀ XƯƠNG (true) hay LÀ THƯỜNG (false)
+                bool currentPulseState = (electricPulseTime % 0.2f < 0.1f);
+
+                // CHỈ chạy lệnh đổi hình khi bị đảo nhịp, TRÁNH spam mỗi frame làm Unity Optimizer bị đơ
+                if (currentPulseState != lastPulseState)
                 {
-                    animator.Play(electricStateName, 0, lockedNormalizedTime);
-                }
-                else
-                {
-                    animator.Play(lockedStateHash, 0, lockedNormalizedTime);
+                    lastPulseState = currentPulseState; // Cập nhật cờ nhớ
+
+                    if (currentPulseState)
+                    {
+                        animator.SetBool("isElectric", true); 
+                        // Hiện Frame 0.0f (Sprite người bình thường) của Clip Electric
+                        animator.Play(electricStateName, 0, 0f);
+                    }
+                    else
+                    {
+                        animator.SetBool("isElectric", true);
+                        // Hiện Frame 1.0f (Sprite xương) của Clip Electric
+                        animator.Play(electricStateName, 0, 1f);
+                    }
+
+                    // LỆNH THẦN THÁNH: Ép Unity cập nhật Sprite render ra màn hình NGAY TỨC KHẮC mặc kệ tốc độ thời gian đang bị khóa 0f
+                    animator.Update(0f);
                 }
             }
 
