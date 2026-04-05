@@ -176,5 +176,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   speed: 15
+  damage: 20
+  damageType: 0
   lifetime: 3
   impactEffectPrefab: {fileID: 0}
+  isStationaryLaser: 0
+  damageTickRate: 0.5

@@ -180,9 +180,9 @@ MonoBehaviour:
   maxHealth: 100
   deathEffect: {fileID: 0}
   attackRange: 7
-  attackDamage: 10
-  attackCooldown: 1
-  moveSpeed: 1.25
+  attackDamage: 20
+  attackCooldown: 3
+  moveSpeed: 1.5
   isRanged: 1
   bulletPrefab: {fileID: 4149936198537583758, guid: b6322f276cbcc1b4eacb56777a6393ed, type: 3}
   firePoint: {fileID: 7857730065316951215}
@@ -192,6 +192,7 @@ MonoBehaviour:
   - {fileID: 9142590731796619250, guid: 2c42223c5a9c2384abe33f0c6ff2e451, type: 3}
   - {fileID: 3004275821454315777, guid: 39aba41c277a1e84a9b50551a753408e, type: 3}
   dropChance: 0.78
+  electricStateName: Enemy_GetElectric
 --- !u!95 &1994316979543654402
 Animator:
   serializedVersion: 7

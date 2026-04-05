@@ -12,9 +12,18 @@ public class PlayerController : MonoBehaviour
     public float maxY = -0.5f; // Vị trí cao nhất Player có thể đi lên (có thể chỉnh trong Inspector)
     public float minY = -2.8f; // Vị trí thấp nhất Player có thể đi xuống
 
+    [Header("Hiệu ứng trúng đòn")]
+    public GameObject hitMuzzlePrefab; // Kéo Prefab Muzzle 2 vào đây
+    public string idleAnimationName = "Idle"; // Điền tên State Animation đứng im (ví dụ: Idle)
+    public float hitStunDuration = 0.1f; // Cấu hình thời gian nhân vật đỏ lè và khựng lại
+
     private int currentHealth;  // Khai báo máu hiện tại
+    private float hitStunTimer = 0f; // Đồng hồ đếm thời gian khựng
+
     private Rigidbody2D rb;
     private Animator animator;
+    private SpriteRenderer spriteRenderer;
+    private Color originalColor = Color.white;
     private Vector2 movement;
     private bool facingRight = true;
 
@@ -25,6 +34,14 @@ public class PlayerController : MonoBehaviour
         currentHealth = maxHealth; // Khởi tạo máu đầu game
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>(); // Tìm Animator
+        spriteRenderer = GetComponent<SpriteRenderer>();
+
+        // Lưu lại màu gốc của Player (Lúc chưa đổi sang đỏ)
+        if (spriteRenderer != null)
+        {
+            originalColor = spriteRenderer.color;
+        }
+
         rb.gravityScale = 0f; // Bỏ trọng lực để di chuyển góc nhìn Top-Down
         rb.freezeRotation = true; // Không cho nhân vật tự xoay khi va chạm
 
@@ -37,6 +54,22 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        // 1. Xử lý trạng thái trúng đòn (Hit Stun) và bị đỏ lè
+        if (hitStunTimer > 0)
+        {
+            hitStunTimer -= Time.deltaTime;
+            movement = Vector2.zero; // Ngăn không cho chạy
+
+            if (hitStunTimer <= 0)
+            {
+                // Khi hết thời gian khựng, trả lại màu zin và tốc độ animation bình thường
+                if (spriteRenderer != null) spriteRenderer.color = originalColor;
+                if (animator != null) animator.speed = 1f;
+            }
+            
+            return; // Khúc này rất quan trọng: chặn hoàn toàn việc đọc phím chạy và bắn ở dưới!
+        }
+
         // Nhận diện phím bấm thô trước khi xử lý
         float hInput = Input.GetAxisRaw("Horizontal");
         float vInput = Input.GetAxisRaw("Vertical");
@@ -112,10 +145,30 @@ public class PlayerController : MonoBehaviour
         currentHealth -= damage;
         Debug.Log("Player bị trúng đạn! Máu còn: " + currentHealth);
 
-        // Kích hoạt animation bị thương (chớp màu đỏ)
-        if (animator != null && currentHealth > 0)
+        // Xử lý hiệu ứng hình ảnh (Muzzle) và nhấp nháy Đỏ 1 tư thế
+        if (currentHealth > 0)
         {
-            animator.SetTrigger("GetHit");
+            // 1. Ép Player nhảy về frame số 0 của animation Idle và ĐÓNG BĂNG luôn tốc độ lại
+            if (animator != null)
+            {
+                animator.Play(idleAnimationName, 0, 0f); 
+                animator.speed = 0f; // Khóa chết tốc độ ở 0
+            }
+
+            // 2. Lấy thùng sơn sơn lại nguyên con sang màu đỏ lè
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.color = Color.red; 
+            }
+
+            // Gán lại bộ đếm để Update() bắt đầu đếm ngược thời gian hồi màu
+            hitStunTimer = hitStunDuration;
+
+            // 3. Sinh ra khối Muzzle nổ ngay tại ngực Player
+            if (hitMuzzlePrefab != null)
+            {
+                Instantiate(hitMuzzlePrefab, transform.position, Quaternion.identity);
+            }
         }
 
         // Cập nhật lên UI

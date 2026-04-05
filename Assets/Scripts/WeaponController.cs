@@ -18,6 +18,9 @@ public class WeaponController : MonoBehaviour
         [Header("Laser Setup")]
         public bool isContinuousLaser = false; // Bật nếu vũ khí này là Laser đứng yên
         public Vector3 firePointOffset; // Chỉnh lệch nòng súng (VD: trục X nhích 0.5, Y nhích 0.1)
+
+        [Header("Audio Setup")]
+        public AudioClip shootSound;
     }
 
     public Weapon[] weapons;
@@ -25,11 +28,18 @@ public class WeaponController : MonoBehaviour
     private float nextFireTime = 0f;
     private float shootBlockTimer = 0f; // Bộ đếm thời gian khóa di chuyển khi bắn
     private Animator animator;
+    private AudioSource audioSource;
     private GameObject activeContinuousLaser; // Lưu trữ tia laser đang xuất hiện
 
     void Start()
     {
         animator = GetComponent<Animator>(); // Tìm Animator của Player
+
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
         
         // Cập nhật UI và hình dáng Player cầm súng đầu tiên ngay khi vào game
         if (weapons.Length > 0)
@@ -68,6 +78,9 @@ public class WeaponController : MonoBehaviour
                         animator.SetTrigger("Shoot");
                     }
 
+                    // Phát âm thanh Laser khi bắt đầu nhấn phím K [THÊM MỚI]
+                    PlayWeaponSound(currentWeapon.shootSound);
+
                     // Vừa bấm tạo ra tia laser và gắn vào dưới FirePoint
                     if (activeContinuousLaser == null && currentWeapon.bulletPrefab != null)
                     {
@@ -83,6 +96,9 @@ public class WeaponController : MonoBehaviour
                 {
                     // Thả phím ra thì xóa tia laser
                     if (activeContinuousLaser != null) Destroy(activeContinuousLaser);
+
+                    // Nếu muốn âm thanh Laser dừng ngay lập tức khi thả phím, hãy dùng:
+                    audioSource.Stop();
                 }
             }
             else
@@ -143,6 +159,9 @@ public class WeaponController : MonoBehaviour
                 animator.SetTrigger("Shoot");
             }
 
+            // Phát âm thanh bắn súng thường/tự động [THÊM MỚI]
+            PlayWeaponSound(currentWeapon.shootSound);
+
             if (currentWeapon.bulletPrefab != null && firePoint != null)
             {
                 // Chú ý: Đạn bay ra ngoài không trung (không làm con của Player) nên phải quay mặt thủ công 180 độ.
@@ -163,6 +182,15 @@ public class WeaponController : MonoBehaviour
             
             nextFireTime = Time.time + currentWeapon.fireRate;
             shootBlockTimer = Time.time + currentWeapon.fireRate; // Khóa di chuyển theo thời gian FireRate
+        }
+    }
+
+    // Hàm bổ trợ để phát âm thanh [THÊM MỚI]
+    void PlayWeaponSound(AudioClip clip)
+    {
+        if (clip != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(clip);
         }
     }
 

@@ -200,10 +200,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxHealth: 100
   deathEffect: {fileID: 0}
-  attackRange: 1.5
+  attackRange: 2.5
   attackDamage: 10
-  attackCooldown: 1
-  moveSpeed: 1.25
+  attackCooldown: 2
+  moveSpeed: 1.75
   isRanged: 0
   bulletPrefab: {fileID: 0}
   firePoint: {fileID: 0}
@@ -213,3 +213,4 @@ MonoBehaviour:
   - {fileID: 9142590731796619250, guid: 2c42223c5a9c2384abe33f0c6ff2e451, type: 3}
   - {fileID: 3004275821454315777, guid: 39aba41c277a1e84a9b50551a753408e, type: 3}
   dropChance: 0.35
+  electricStateName: Enemy_GetElectric

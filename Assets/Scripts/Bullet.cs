@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 [RequireComponent(typeof(Rigidbody2D), typeof(BoxCollider2D))]
 public class Bullet : MonoBehaviour
@@ -11,8 +12,9 @@ public class Bullet : MonoBehaviour
     
     [Header("Laser Settings")]
     public bool isStationaryLaser = false; // Bật lên nếu dùng viên đạn này làm tia laser đứng yên
-    public float damageTickRate = 0.5f;    // Thời gian giãn cách giữa các lần giật dame (nếu để laser dính vào quái)
-    private float nextDamageTime;
+    
+    // Danh sách lưu các mục tiêu đang nằm trong tia laser (để chống lỗi Physics Sleep gây nhấp nháy tuỳ ý)
+    private List<Enemy> overlappingEnemies = new List<Enemy>();
 
     private Rigidbody2D rb;
 
@@ -23,8 +25,6 @@ public class Bullet : MonoBehaviour
 
         if (isStationaryLaser)
         {
-            // Tự động set damage để 3 hit chết (100 máu / 3 = 34)
-            damage = 34;
             // Laser mặc định là sát thương giật điện
             damageType = Enemy.DamageType.Electric;
 
@@ -43,46 +43,75 @@ public class Bullet : MonoBehaviour
         }
     }
 
+    void Update()
+    {
+        // Liên tục cập nhật khống chế và sát thương cho các quái đang nằm trong tia Laser
+        if (isStationaryLaser)
+        {
+            // Quét ngược danh sách để có thể xoá an toàn nếu quái đã chết
+            for (int i = overlappingEnemies.Count - 1; i >= 0; i--)
+            {
+                Enemy enemy = overlappingEnemies[i];
+                
+                // Nếu quái bị huỷ hoặc chết (script bị vô hiệu hoá) thì xoá khỏi danh sách
+                if (enemy == null || !enemy.enabled)
+                {
+                    overlappingEnemies.RemoveAt(i);
+                    continue;
+                }
+
+                // Liên tục bơm Stun khống chế khi bị nướng (nhưng máu không tuột theo giây nữa)
+                enemy.ApplyStun(0.15f);
+            }
+        }
+    }
+
     void OnTriggerEnter2D(Collider2D hitInfo)
     {
-        // Tránh xét va chạm với người chơi (giả sử Player có tag "Player")
+        // Tránh xét va chạm với người chơi
         if (hitInfo.CompareTag("Player")) return;
 
-        // Xử lý sát thương nếu vật thể bị tông trúng là Kẻ địch
         Enemy enemy = hitInfo.GetComponent<Enemy>();
-        if (enemy != null)
-        {
-            enemy.TakeDamage(damage, damageType);
-        }
 
-        // Sinh ra hiệu ứng nổ / va chạm
-        if (impactEffectPrefab != null)
+        if (isStationaryLaser)
         {
-            Instantiate(impactEffectPrefab, transform.position, transform.rotation);
+            // Xử lý riêng cho Laser
+            if (enemy != null && !overlappingEnemies.Contains(enemy))
+            {
+                overlappingEnemies.Add(enemy);
+                
+                enemy.ApplyStun(0.15f);
+                enemy.TakeLaserHit(); // Gọi hàm xử lý sát thương theo số đếm hit
+            }
         }
-
-        // Hủy viên đạn nếu không phải laser đứng yên
-        if (!isStationaryLaser)
+        else
         {
+            // Xử lý cho Đạn thường
+            if (enemy != null)
+            {
+                enemy.TakeDamage(damage, damageType);
+            }
+
+            // Sinh ra hiệu ứng nổ / va chạm
+            if (impactEffectPrefab != null)
+            {
+                Instantiate(impactEffectPrefab, transform.position, transform.rotation);
+            }
+
+            // Hủy viên đạn thường ngay lập tức
             Destroy(gameObject);
         }
     }
 
-    void OnTriggerStay2D(Collider2D hitInfo)
+    void OnTriggerExit2D(Collider2D hitInfo)
     {
-        // Chức năng giật sát thương liên tục chỉ dành cho Laser
+        // Khi quái vật đi ra khỏi tia laser, xoá khỏi danh sách chạm để ngừng Update
         if (!isStationaryLaser) return;
 
-        if (hitInfo.CompareTag("Player")) return;
-
-        if (Time.time >= nextDamageTime)
+        Enemy enemy = hitInfo.GetComponent<Enemy>();
+        if (enemy != null && overlappingEnemies.Contains(enemy))
         {
-            Enemy enemy = hitInfo.GetComponent<Enemy>();
-            if (enemy != null)
-            {
-                enemy.TakeDamage(damage, damageType);
-                nextDamageTime = Time.time + damageTickRate;
-            }
+            overlappingEnemies.Remove(enemy);
         }
     }
 }

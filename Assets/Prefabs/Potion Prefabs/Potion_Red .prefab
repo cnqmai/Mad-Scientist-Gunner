@@ -103,11 +103,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   potionType: 2
-  greenHeal: 10
+  greenHeal: 20
   pinkHeal: 20
-  blueHeal: 25
-  redHeal: 50
-  lifetime: 8
+  blueHeal: 20
+  redHeal: 20
+  lifetime: 5
 --- !u!50 &-7420932242293305087
 Rigidbody2D:
   serializedVersion: 5

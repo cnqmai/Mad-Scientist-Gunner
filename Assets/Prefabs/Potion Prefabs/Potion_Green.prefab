@@ -165,8 +165,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79278685c1edf0544bfface288cad2a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  healAmount: 10
-  bobSpeed: 2
-  bobHeight: 0.1
-  spinSpeed: 90
-  lifetime: 8
+  potionType: 0
+  greenHeal: 20
+  pinkHeal: 20
+  blueHeal: 20
+  redHeal: 20
+  lifetime: 5

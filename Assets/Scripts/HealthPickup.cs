@@ -8,13 +8,13 @@ public class HealthPickup : MonoBehaviour
     public PotionType potionType = PotionType.Green;
 
     [Header("Lượng hồi máu theo loại")]
-    public int greenHeal = 30;  // Xanh lá: hồi nhiều
+    public int greenHeal = 20;  // Xanh lá: hồi nhiều
     public int pinkHeal  = 20;  // Hồng: hồi khá
-    public int blueHeal  = 25;  // Xanh dương: hồi vừa
-    public int redHeal   = 15;  // Đỏ: hồi ít
+    public int blueHeal  = 20;  // Xanh dương: hồi vừa
+    public int redHeal   = 20;  // Đỏ: hồi ít
 
     [Header("Tự biến mất sau X giây")]
-    public float lifetime = 8f;
+    public float lifetime = 5f;
 
     // --- Private ---
     private Vector3 startPos;

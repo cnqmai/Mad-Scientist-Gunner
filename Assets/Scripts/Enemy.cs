@@ -11,7 +11,7 @@ public class Enemy : MonoBehaviour
     [Header("Tấn công Player")]
     public float attackRange = 1.5f; // Tầm đánh xa hay gần (Ví dụ: 1.5 mét)
     public int attackDamage = 10;    // Lượng máu trừ của Player khi bị chém
-    public float attackCooldown = 1f; // Chờ 1 giây mới được chém tiếp (chống bug spam)
+    public float attackCooldown = 3f; // Chờ 3 giây mới được chém tiếp (chống bug spam)
     public float moveSpeed = 1.25f;     // Tốc độ đi bộ đuổi theo Player
     
     [Header("Bắn đạn (Chỉ bật cho Quái đánh xa)")]
@@ -20,13 +20,55 @@ public class Enemy : MonoBehaviour
     public Transform firePoint;        // Vị trí nòng súng của quái
 
     [Header("Rơi Potion hồi máu (Random)")]
-    public GameObject[] pickupPrefabs; // Kéo 3 Prefab potion vào đây (Xanh / Vàng / Đỏ)
+    public GameObject[] pickupPrefabs;
     [Range(0f, 1f)]
     public float dropChance = 0.35f;   // Xác suất rơi potion (mặc định 35%)
-    
+
     private Transform player; // Để ghi nhớ vị trí người chơi
     private float nextAttackTime = 0f;
-    private bool facingRight = false; // Phụ thuộc vào ảnh gốc con quái của bạn quay hướng nào (ví dụ mặc định quay mỏ sang trái thì là false)
+    private bool facingRight = false; // Phụ thuộc vào ảnh gốc con quái của bạn quay hướng nào
+    private float stunTimer = 0f; // Thời gian duy trì khống chế
+    private int laserHitCount = 0; // Đếm số tia laser chạm trúng
+
+    [Header("Cấu hình giật điện nhấp nháy")]
+    public string electricStateName = "Electric"; // Điền TÊN CỤC STATE GIẬT điện trong Animator vào đây
+    private float electricPulseTime = 0f; // Đồng hồ nhấp nháy
+    private int lockedStateHash; // Lưu mốc tư thế cũ
+    private float lockedNormalizedTime; // Lưu thời gian frame cũ
+
+    // Bullet.cs sẽ gọi hàm này và bơm thêm thời gian stun khi laser chạm quái
+    public void ApplyStun(float duration)
+    {
+        // Nếu trước đó đang tỉnh táo mà bị bắn, LẬP TỨC CHỤP ẢNH LẠI tư thế hiện tại (để mồi cho chớp nháy)
+        if (stunTimer <= 0 && animator != null)
+        {
+            AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
+            if (!state.IsName(electricStateName))
+            {
+                lockedStateHash = state.shortNameHash;
+                lockedNormalizedTime = state.normalizedTime % 1f; // Chụp lại Frame đang đi bộ
+            }
+        }
+
+        stunTimer = duration;
+    }
+
+    public void TakeLaserHit()
+    {
+        if (currentHealth <= 0) return;
+
+        laserHitCount++;
+        int sliceDamage = Mathf.CeilToInt(maxHealth / 3f);
+
+        if (laserHitCount >= 3)
+        {
+            TakeDamage(currentHealth, DamageType.Electric); // Trúng tia thứ 3 là chết luôn
+        }
+        else
+        {
+            TakeDamage(sliceDamage, DamageType.Electric); // Mất 1/3 máu
+        }
+    }
 
     void Start()
     {
@@ -45,6 +87,46 @@ public class Enemy : MonoBehaviour
     {
         // Nếu quái chết hoặc không tìm thấy Player thì không làm gì cả
         if (currentHealth <= 0 || player == null) return;
+
+        // Cập nhật bộ đếm thời gian Stun
+        if (stunTimer > 0)
+        {
+            stunTimer -= Time.deltaTime;
+        }
+        
+        if (stunTimer > 0)
+        {
+            electricPulseTime += Time.deltaTime;
+
+            if (animator != null)
+            {
+                animator.speed = 0f; // ĐÓNG BĂNG TUYỆT ĐỐI thời gian Animator, bắt kẹt ở Frame lúc vừa trúng đạn
+
+                // Bật tắt liên tục mỗi 0.1s bằng cách nhảy qua lại giữa 2 State (vẫn đóng băng cùng 1 Frame)
+                if (electricPulseTime % 0.2f < 0.1f)
+                {
+                    animator.Play(electricStateName, 0, lockedNormalizedTime);
+                }
+                else
+                {
+                    animator.Play(lockedStateHash, 0, lockedNormalizedTime);
+                }
+            }
+
+            animator.SetBool("IsWalking", false); // Dừng animation đi bộ
+            return; // Thoát ra khỏi hàm Update, CHẶN không cho dòng code di chuyển & đánh chạy!
+        }
+        else
+        {
+            // Trả lại tốc độ chạy bình thường khi thả nút nướng Laser
+            electricPulseTime = 0f;
+            if (animator != null)
+            {
+                animator.speed = 1f;
+                // Clear bool để phòng trường hợp Transition cũ vẫn còn kẹt
+                animator.SetBool("isElectric", false); 
+            }
+        }
 
         // Tính khoảng cách giữa Quái vật và Player
         float distanceToPlayer = Vector2.Distance(transform.position, player.position);
@@ -158,13 +240,10 @@ public class Enemy : MonoBehaviour
         // Kích hoạt animation tương ứng nếu máu còn lớn hơn 0
         if (animator != null && currentHealth > 0)
         {
-            if (damageType == DamageType.Electric)
+            // KHÔNG dùng Trigger cho Electric ở đây nữa [XÓA DÒNG CŨ]
+            if (damageType != DamageType.Electric)
             {
-                animator.SetTrigger("GetElectric");
-            }
-            else
-            {
-                animator.SetTrigger("GetHit"); // Bị Player bắn trúng
+                animator.SetTrigger("GetHit"); 
             }
         }
 
@@ -185,6 +264,38 @@ public class Enemy : MonoBehaviour
             UIManager.instance.AddKill();   // Tăng số mạng hạ gục lên 1
         }
 
+        if (animator != null)
+        {
+            animator.SetTrigger("Die");
+            
+            // Tắt va chạm để đạn bay xuyên qua (không trúng xác chết), và quái vật ngã xuống
+            Collider2D col = GetComponent<Collider2D>();
+            if (col != null) col.enabled = false;
+
+            float deathAnimationTime = 1f; // Thời gian chạy animation chết
+
+            // Hẹn giờ rớt potion sau khi animation chạy xong
+            Invoke("DropPotion", deathAnimationTime);
+
+            // Xóa khỏi màn hình sau 1.1 giây (Trễ hơn hàm DropPotion 1 chút xíu để đảm bảo Potion kịp rớt ra trước khi quái bị xoá hẳn)
+            Destroy(gameObject, deathAnimationTime + 0.1f); 
+            
+            // Vô hiệu hóa script này để không gọi máu hay hiệu ứng hit nữa
+            this.enabled = false;
+        }
+        else
+        {
+            if (deathEffect != null)
+            {
+                Instantiate(deathEffect, transform.position, Quaternion.identity);
+            }
+            DropPotion(); // Rớt ngay lập tức vì không có animation
+            Destroy(gameObject); // Hủy GameObject
+        }
+    }
+
+    void DropPotion()
+    {
         // Random rơi potion hồi máu
         if (pickupPrefabs != null && pickupPrefabs.Length > 0 && Random.value <= dropChance)
         {
@@ -196,32 +307,8 @@ public class Enemy : MonoBehaviour
             {
                 Vector3 dropPos = transform.position + new Vector3(0f, 0.3f, 0f);
                 Instantiate(chosenPotion, dropPos, Quaternion.identity);
-                Debug.Log(gameObject.name + " rơi ra potion loại " + randomIndex + "!");
+                Debug.Log(gameObject.name + " rơi ra potion loại " + randomIndex + " sau khi nằm xuống!");
             }
-        }
-
-        if (animator != null)
-        {
-            animator.SetTrigger("Die");
-            
-            // Tắt va chạm để đạn bay xuyên qua (không trúng xác chết), và quái vật ngã xuống
-            Collider2D col = GetComponent<Collider2D>();
-            if (col != null) col.enabled = false;
-
-            // Xóa khỏi màn hình sau 1 giây (để animation chết có thời gian chạy xong)
-            // Bạn có thể chỉnh sửa số 1f này tùy theo độ dài của animation chết
-            Destroy(gameObject, 1f); 
-            
-            // Vô hiệu hóa script này để không gọi máu hay hiệu ứng hit nữa
-            this.enabled = false;
-        }
-        else
-        {
-            if (deathEffect != null)
-            {
-                Instantiate(deathEffect, transform.position, Quaternion.identity);
-            }
-            Destroy(gameObject); // Hủy GameObject
         }
     }
 }

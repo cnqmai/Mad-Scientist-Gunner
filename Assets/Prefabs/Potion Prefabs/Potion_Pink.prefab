@@ -176,8 +176,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   potionType: 3
-  greenHeal: 30
+  greenHeal: 20
   pinkHeal: 20
-  blueHeal: 25
-  redHeal: 15
-  lifetime: 8
+  blueHeal: 20
+  redHeal: 20
+  lifetime: 5
