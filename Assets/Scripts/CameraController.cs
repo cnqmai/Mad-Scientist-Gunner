@@ -8,6 +8,10 @@ public class CameraController : MonoBehaviour
 
     public bool lockYAxis = false; // Tick vào nếu không muốn Camera nhảy lên cao khi Player nhảy/bay
 
+    public bool enableClamp = false; // Bật giới hạn góc nhìn camera
+    public Vector2 minBounds; // Tọa độ nhỏ nhất (Góc dưới bên trái giới hạn)
+    public Vector2 maxBounds; // Tọa độ lớn nhất (Góc trên bên phải giới hạn)
+
     void LateUpdate()
     {
         // Kiểm tra xem đã gán mục tiêu chưa
@@ -26,6 +30,13 @@ public class CameraController : MonoBehaviour
         // Dùng SmoothDamp hoặc Lerp để tạo cảm giác lướt camera nhịp nhàng (không bị cứng ngắc)
         Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed);
         
+        // Căn chỉnh giới hạn di chuyển camera nếu bật
+        if (enableClamp)
+        {
+            smoothedPosition.x = Mathf.Clamp(smoothedPosition.x, minBounds.x, maxBounds.x);
+            smoothedPosition.y = Mathf.Clamp(smoothedPosition.y, minBounds.y, maxBounds.y);
+        }
+
         // Cập nhật vị trí mới cho Camera
         transform.position = smoothedPosition;
     }
